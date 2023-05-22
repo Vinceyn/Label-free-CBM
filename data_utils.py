@@ -1,5 +1,6 @@
 import os
 import torch
+from pathlib import Path
 from torchvision import datasets, transforms, models
 
 import clip
@@ -25,7 +26,7 @@ def get_resnet_imagenet_preprocess():
                    transforms.ToTensor(), transforms.Normalize(mean=target_mean, std=target_std)])
     return preprocess
 
-
+"""This version is deprecated, as it used to download models
 def get_data(dataset_name, preprocess=None):
     if dataset_name == "cifar100_train":
         data = datasets.CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=True,
@@ -65,6 +66,44 @@ def get_data(dataset_name, preprocess=None):
     elif dataset_name == "imagenet_broden":
         data = torch.utils.data.ConcatDataset([datasets.ImageFolder(DATASET_ROOTS["imagenet_val"], preprocess), 
                                                      datasets.ImageFolder(DATASET_ROOTS["broden"], preprocess)])
+    return data
+"""
+
+def get_data(dataset_name, preprocess=None):
+    if dataset_name == "cifar100_train":
+        data_path = Path.cwd() / 'data' / 'datasets' / 'cifar100'
+        data = datasets.CIFAR100(root=data_path, train=True, download=False, transform=preprocess)
+
+    elif dataset_name == "cifar100_val":
+        data_path = Path.cwd() / 'data' / 'datasets' / 'cifar100'
+        data = datasets.CIFAR100(root=data_path, train=False, download=False, transform=preprocess)
+
+    elif dataset_name == "cifar10_train":
+        data_path = Path.cwd() / 'data' / 'datasets' / 'cifar10'
+        data = datasets.CIFAR10(root=data_path, train=True, download=False, transform=preprocess)
+
+    elif dataset_name == "cifar10_val": 
+        data_path = Path.cwd() / 'data' / 'datasets' / 'cifar10'
+        data = datasets.CIFAR10(root=data_path, train=False, download=False, transform=preprocess)
+
+    elif dataset_name == "places365_train":
+        data_path = Path.cwd() / 'data' / 'datasets' / 'places365'
+        data = datasets.Places365(root=data_path, split="train-standard", small=True, download=False, transform=preprocess)
+            
+    elif dataset_name == "places365_val": 
+        data_path = Path.cwd() / 'data' / 'datasets' / 'places365'
+        data = datasets.Places365(root=data_path, split="val", small=True, download=False, transform=preprocess)
+            
+    elif dataset_name in DATASET_ROOTS.keys():
+        data = datasets.ImageFolder(DATASET_ROOTS[dataset_name], preprocess)
+               
+    elif dataset_name == "imagenet_broden":
+        data = torch.utils.data.ConcatDataset([datasets.ImageFolder(DATASET_ROOTS["imagenet_val"], preprocess), 
+                                                     datasets.ImageFolder(DATASET_ROOTS["broden"], preprocess)])
+    
+    else:
+        raise ValueError("Dataset name not found")
+    
     return data
 
 def get_targets_only(dataset_name):

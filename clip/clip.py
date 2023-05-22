@@ -5,6 +5,7 @@ import warnings
 from typing import Any, Union, List
 from pkg_resources import packaging
 
+from pathlib import Path
 import torch
 from PIL import Image
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
@@ -40,7 +41,16 @@ _MODELS = {
 }
 
 
+def _load(model_name: str):
+    path_model = Path.cwd() / 'clip' / 'models' / model_name
+    # Load model from file using torch.jit.load
+    model = torch.jit.load(str(path_model))
+    return model
+
+
 def _download(url: str, root: str):
+    # Deprecated function as model files are downloaded before run
+
     os.makedirs(root, exist_ok=True)
     filename = os.path.basename(url)
 
@@ -71,6 +81,9 @@ def _download(url: str, root: str):
 
     return download_target
 
+def _get_model_path(url: str):
+    model_name = os.path.basename(url)
+    return Path.cwd() / 'clip' / 'models' / model_name
 
 def _convert_image_to_rgb(image):
     return image.convert("RGB")
@@ -117,7 +130,9 @@ def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_a
         A torchvision transform that converts a PIL image into a tensor that the returned model can take as its input
     """
     if name in _MODELS:
-        model_path = _download(_MODELS[name], download_root or os.path.expanduser("~/.cache/clip"))
+        # Previous version that downloaded the model
+        # model_path = _download(_MODELS[name], download_root or os.path.expanduser("~/.cache/clip"))
+        model_path = _get_model_path(_MODELS[name])
     elif os.path.isfile(name):
         model_path = name
     else:

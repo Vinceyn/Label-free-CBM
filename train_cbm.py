@@ -7,20 +7,32 @@ import similarity
 import argparse
 import datetime
 import json
+import logging
 
 from glm_saga.elasticnet import IndexedTensorDataset, glm_saga
 from torch.utils.data import DataLoader, TensorDataset
 
+import datetime
+from pathlib import Path
+
+log_file = 'run_{}.log'.format(datetime.datetime.now().strftime("%Y%m%d%H%M"))
+log_path = Path.cwd() / 'logs' / log_file
+
+logging.basicConfig(filename=log_path, level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
+
 parser = argparse.ArgumentParser(description='Settings for creating CBM')
 
-
+logging.debug('Parsing daataset, concept set, backbone and clip name')
 parser.add_argument("--dataset", type=str, default="cifar10")
 parser.add_argument("--concept_set", type=str, default=None, 
                     help="path to concept set name")
 parser.add_argument("--backbone", type=str, default="clip_RN50", help="Which pretrained model to use as backbone")
 parser.add_argument("--clip_name", type=str, default="ViT-B/16", help="Which CLIP model to use")
 
+logging.debug('Parsing torch device')
 parser.add_argument("--device", type=str, default="cuda", help="Which device to use")
+
+logging.debug('Parsing hyperparameters')
 parser.add_argument("--batch_size", type=int, default=512, help="Batch size used when saving model/CLIP activations")
 parser.add_argument("--saga_batch_size", type=int, default=256, help="Batch size used when fitting final layer")
 parser.add_argument("--proj_batch_size", type=int, default=50000, help="Batch size to use when learning projection layer")
@@ -37,7 +49,8 @@ parser.add_argument("--n_iters", type=int, default=1000, help="How many iteratio
 parser.add_argument("--print", action='store_true', help="Print all concepts being deleted in this stage")
 
 def train_cbm_and_save(args):
-    
+
+    logging.info('Loading concept and classes')    
     if not os.path.exists(args.save_dir):
         os.mkdir(args.save_dir)
     if args.concept_set==None:
@@ -48,7 +61,7 @@ def train_cbm_and_save(args):
     d_train = args.dataset + "_train"
     d_val = args.dataset + "_val"
     
-    #get concept set
+    # Get concept set
     cls_file = data_utils.LABEL_FILES[args.dataset]
     with open(cls_file, "r") as f:
         classes = f.read().split("\n")
@@ -57,17 +70,22 @@ def train_cbm_and_save(args):
         concepts = f.read().split("\n")
     
     #save activations and get save_paths
+    logging.info('Saving activations from backbone and CLIP')
     for d_probe in [d_train, d_val]:
         utils.save_activations(clip_name = args.clip_name, target_name = args.backbone, 
                                target_layers = [args.feature_layer], d_probe = d_probe,
                                concept_set = args.concept_set, batch_size = args.batch_size, 
                                device = args.device, pool_mode = "avg", save_dir = args.activation_dir)
         
+    logging.info('Loading activations from backbone and CLIP')
+    logging.debug('Fetching save names for activations')
     target_save_name, clip_save_name, text_save_name = utils.get_save_names(args.clip_name, args.backbone, 
                                             args.feature_layer,d_train, args.concept_set, "avg", args.activation_dir)
     val_target_save_name, val_clip_save_name, text_save_name =  utils.get_save_names(args.clip_name, args.backbone,
                                             args.feature_layer, d_val, args.concept_set, "avg", args.activation_dir)
     
+    logging.debug('Loading activations from backbone and CLIP, and normalizing')
+
     #load features
     with torch.no_grad():
         target_features = torch.load(target_save_name, map_location="cpu").float()
@@ -82,13 +100,15 @@ def train_cbm_and_save(args):
 
         text_features = torch.load(text_save_name, map_location="cpu").float()
         text_features /= torch.norm(text_features, dim=1, keepdim=True)
-        
+
+        logging.debug('Calculating CLIP similarity matrix')        
         clip_features = image_features @ text_features.T
         val_clip_features = val_image_features @ text_features.T
 
         del image_features, text_features, val_image_features
     
     #filter concepts not activating highly
+    logging.info('Filtering concepts not activating highly')
     highest = torch.mean(torch.topk(clip_features, dim=0, k=5)[0], dim=0)
     
     if args.print:
@@ -96,9 +116,12 @@ def train_cbm_and_save(args):
             if highest[i]<=args.clip_cutoff:
                 print("Deleting {}, CLIP top5:{:.3f}".format(concept, highest[i]))
     concepts = [concepts[i] for i in range(len(concepts)) if highest[i]>args.clip_cutoff]
-    
+
+
     #save memory by recalculating
     del clip_features
+
+    logging.info('Recomputing similarity matrix, with filtered concepts')
     with torch.no_grad():
         image_features = torch.load(clip_save_name, map_location="cpu").float()
         image_features /= torch.norm(image_features, dim=1, keepdim=True)
@@ -107,10 +130,10 @@ def train_cbm_and_save(args):
         text_features /= torch.norm(text_features, dim=1, keepdim=True)
     
         clip_features = image_features @ text_features.T
-        del image_features, text_features
-    
+        del image_features, text_features    
     val_clip_features = val_clip_features[:, highest>args.clip_cutoff]
-    
+
+    logging.info('Training projection layer from backbone to concepts')    
     #learn projection layer
     proj_layer = torch.nn.Linear(in_features=target_features.shape[1], out_features=len(concepts),
                                  bias=False).to(args.device)
@@ -149,11 +172,13 @@ def train_cbm_and_save(args):
             else: #stop if val loss starts increasing
                 break
         opt.zero_grad()
-        
+
+    logging.info('Training done, saving best projection layer') 
     proj_layer.load_state_dict({"weight":best_weights})
     print("Best step:{}, Avg val similarity:{:.4f}".format(best_step, -best_val_loss.cpu()))
     
     #delete concepts that are not interpretable
+    logging.info('Deleting concepts that are not interpretable in validation data')
     with torch.no_grad():
         outs = proj_layer(val_target_features.to(args.device).detach())
         sim = similarity_fn(val_clip_features.to(args.device).detach(), outs)
@@ -162,16 +187,19 @@ def train_cbm_and_save(args):
     if args.print:
         for i, concept in enumerate(concepts):
             if sim[i]<=args.interpretability_cutoff:
-                print("Deleting {}, Iterpretability:{:.3f}".format(concept, sim[i]))
+                print("Deleting {}, Interpretability:{:.3f}".format(concept, sim[i]))
     
     concepts = [concepts[i] for i in range(len(concepts)) if interpretable[i]]
-    
+
+    logging.debug('Remaining concepts: {}'.format(concepts)) 
     del clip_features, val_clip_features
     
+    logging.info('Creating new projection layer with interpretable concepts')
     W_c = proj_layer.weight[interpretable]
     proj_layer = torch.nn.Linear(in_features=target_features.shape[1], out_features=len(concepts), bias=False)
     proj_layer.load_state_dict({"weight":W_c})
     
+    logging.info('Creating dataset with interpretable concepts predicted by the projection layer and final targets')
     train_targets = data_utils.get_targets_only(d_train)
     val_targets = data_utils.get_targets_only(d_val)
     
@@ -204,6 +232,7 @@ def train_cbm_and_save(args):
     linear.weight.data.zero_()
     linear.bias.data.zero_()
     
+    logging.info('Training the final linear model from interpretable concepts to final targets')
     STEP_SIZE = 0.1
     ALPHA = 0.99
     metadata = {}
@@ -216,6 +245,7 @@ def train_cbm_and_save(args):
     W_g = output_proj['path'][0]['weight']
     b_g = output_proj['path'][0]['bias']
     
+    logging.info('Saving the final model')
     save_name = "{}/{}_cbm_{}".format(args.save_dir, args.dataset, datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))
     os.mkdir(save_name)
     torch.save(train_mean, os.path.join(save_name, "proj_mean.pt"))
