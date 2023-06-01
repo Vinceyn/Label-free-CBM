@@ -1,11 +1,12 @@
 import os
 import math
-import torch
-import clip
-import data_utils
-
 from tqdm import tqdm
+
+import torch
 from torch.utils.data import DataLoader
+
+import clip
+from utils import data_utils
 
 PM_SUFFIX = {"max":"_max", "avg":""}
 

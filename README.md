@@ -11,6 +11,11 @@ This is the official repository for our paper [Label-Free Concept Bottleneck Mod
 3. Download pretrained models by running  `bash download_models.sh` (they will be unpacked to `saved_models`)
 4. Download and process CUB dataset by running `bash download_cub.sh` 
 
+(Optional, if your cluster doesn't have access to internet)
+5. Download the clip models by running `python label-free-cbm/utils/download_models.py` 
+6. Download the datasets by running `python label-free-cbm/utils/download_data.py` 
+7. Create the `logs` folder at the root of the project
+
 We do not provide download instructions for ImageNet data, to evaluate using your own copy of ImageNet you must set the correct path in `DATASET_ROOTS["imagenet_train"]` and `DATASET_ROOTS["imagenet_val"]` variables in `data_utils.py`.
 
 ## Running the models
@@ -24,7 +29,7 @@ B. Process and filter the conceptset by running `GPT_conceptset_processor.ipynb`
 
 Train a concept bottleneck model on CIFAR10 by running:
 
-`python train_cbm.py --concept_set data/concept_sets/cifar10_filtered.txt`
+`python label_free_cbm/train_cbm.py --concept_set data/concept_sets/cifar10_filtered.txt`
 
 
 ### 3. Evaluate trained models

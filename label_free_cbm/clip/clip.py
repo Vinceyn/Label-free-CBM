@@ -82,6 +82,9 @@ def _download(url: str, root: str):
     return download_target
 
 def _get_model_path(url: str):
+    """
+    Get the model Path from the folders
+    """
     model_name = os.path.basename(url)
     return Path.cwd() / 'clip' / 'models' / model_name
 

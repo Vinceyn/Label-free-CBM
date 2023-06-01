@@ -1,19 +1,23 @@
-import torch
-import os
-import random
-import utils
-import data_utils
-import similarity
 import argparse
 import datetime
 import json
 import logging
+import os
+from pathlib import Path
+import random
 
-from glm_saga.elasticnet import IndexedTensorDataset, glm_saga
+import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-import datetime
-from pathlib import Path
+import similarity
+from utils import data_utils, utils
+from glm_saga.elasticnet import IndexedTensorDataset, glm_saga
+
+
+log_file = 'run_{}.log'.format(datetime.datetime.now().strftime("%Y%m%d%H%M"))
+log_path = Path.cwd() / 'logs' / log_file
+
+logging.basicConfig(filename=log_path, level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
 
 log_file = 'run_{}.log'.format(datetime.datetime.now().strftime("%Y%m%d%H%M"))
 log_path = Path.cwd() / 'logs' / log_file
@@ -65,7 +69,8 @@ def train_cbm_and_save(args):
     cls_file = data_utils.LABEL_FILES[args.dataset]
     with open(cls_file, "r") as f:
         classes = f.read().split("\n")
-    
+
+     
     with open(args.concept_set) as f:
         concepts = f.read().split("\n")
     

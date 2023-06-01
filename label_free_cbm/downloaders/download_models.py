@@ -13,7 +13,7 @@ import torch
 from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
-
+from pytorchcv.model_provider import get_model as ptcv_get_model
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -67,7 +67,15 @@ def _download_and_save(url, save_path):
 
     return
 
+def download_resnet18_cub(save_path=Path.cwd() / 'saved_models' / 'resnet18_cub.pt'):
+    """
+    Download the pretrained ResNet18 model from PyTorch Computer Vision Models.
+    """
+    target_model = ptcv_get_model("resnet18_cub", pretrained=True)
+    target_model.eval()
+    torch.save(target_model, save_path)
 
 
 if __name__ == "__main__":
-    download_all_models()
+    download_resnet18_cub()
+    # download_all_models()

@@ -1,15 +1,14 @@
-import os
 import argparse
 import datetime
 import json
+import os
+
 import torch
+from torch.utils.data import DataLoader, TensorDataset
 
 import clip
-import utils
-import data_utils
-
 from glm_saga.elasticnet import IndexedTensorDataset, glm_saga
-from torch.utils.data import DataLoader, TensorDataset
+from utils import data_utils, utils
 
 parser = argparse.ArgumentParser(description='Settings for creating model')
 

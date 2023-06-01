@@ -129,7 +129,8 @@ def get_target_model(target_name, device):
         preprocess = get_resnet_imagenet_preprocess()
         
     elif target_name == 'resnet18_cub':
-        target_model = ptcv_get_model("resnet18_cub", pretrained=True).to(device)
+        path = Path.cwd() / 'saved_models' / 'resnet18_cub.pt'
+        target_model = torch.load(path).to(device)
         target_model.eval()
         preprocess = get_resnet_imagenet_preprocess()
     

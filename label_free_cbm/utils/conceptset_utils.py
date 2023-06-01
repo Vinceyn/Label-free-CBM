@@ -1,11 +1,13 @@
-import requests
-import random
-import numpy as np
-import torch
 import math
 from tqdm import tqdm
+import random
+
+import numpy as np
+import requests
+import torch
+from sentence_transformers import SentenceTransformer
+
 import clip
-from sentence_transformers import SentenceTransformer    
     
 def get_init_conceptnet(classes, limit=200, relations=["HasA", "IsA", "PartOf", "HasProperty", "MadeOf", "AtLocation"]):
     concepts = set()
