@@ -2,7 +2,7 @@ import re
 import numpy as np
 from matplotlib import pyplot as pl
 
-import colors
+from plots import colors
 
 def bar(contributions, feature_names,  max_display=10, show=True, title=None, fontsize=13):
 

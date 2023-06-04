@@ -1,7 +1,8 @@
 import os
 import json
 import torch
-import data_utils
+from utils import data_utils
+from pathlib import Path
 
 class CBM_model(torch.nn.Module):
     def __init__(self, backbone_name, W_c, W_g, b_g, proj_mean, proj_std, device="cuda"):
@@ -64,12 +65,13 @@ def load_cbm(load_dir, device):
     with open(os.path.join(load_dir ,"args.txt"), 'r') as f:
         args = json.load(f)
 
-    W_c = torch.load(os.path.join(load_dir ,"W_c.pt"), map_location=device)
-    W_g = torch.load(os.path.join(load_dir, "W_g.pt"), map_location=device)
-    b_g = torch.load(os.path.join(load_dir, "b_g.pt"), map_location=device)
+    # Changing the map location to cpu, before mapping to device, because it doesn't load otherwise
+    W_c = torch.load(os.path.join(load_dir ,"W_c.pt"), map_location='cpu').to(device)
+    W_g = torch.load(os.path.join(load_dir, "W_g.pt"), map_location='cpu').to(device)
+    b_g = torch.load(os.path.join(load_dir, "b_g.pt"), map_location='cpu').to(device)
 
-    proj_mean = torch.load(os.path.join(load_dir, "proj_mean.pt"), map_location=device)
-    proj_std = torch.load(os.path.join(load_dir, "proj_std.pt"), map_location=device)
+    proj_mean = torch.load(os.path.join(load_dir, "proj_mean.pt"), map_location='cpu').to(device)
+    proj_std = torch.load(os.path.join(load_dir, "proj_std.pt"), map_location='cpu').to(device)
 
     model = CBM_model(args['backbone'], W_c, W_g, b_g, proj_mean, proj_std, device)
     return model
@@ -78,11 +80,12 @@ def load_std(load_dir, device):
     with open(os.path.join(load_dir ,"args.txt"), 'r') as f:
         args = json.load(f)
 
-    W_g = torch.load(os.path.join(load_dir, "W_g.pt"), map_location=device)
-    b_g = torch.load(os.path.join(load_dir, "b_g.pt"), map_location=device)
+    # Changing the map location to cpu, before mapping to device, because it doesn't load otherwise
+    W_g = torch.load(os.path.join(load_dir, "W_g.pt"), map_location='cpu').to(device)
+    b_g = torch.load(os.path.join(load_dir, "b_g.pt"), map_location='cpu').to(device)
 
-    proj_mean = torch.load(os.path.join(load_dir, "proj_mean.pt"), map_location=device)
-    proj_std = torch.load(os.path.join(load_dir, "proj_std.pt"), map_location=device)
+    proj_mean = torch.load(os.path.join(load_dir, "proj_mean.pt"), map_location='cpu').to(device)
+    proj_std = torch.load(os.path.join(load_dir, "proj_std.pt"), map_location='cpu').to(device)
 
     model = standard_model(args['backbone'], W_g, b_g, proj_mean, proj_std, device)
     return model

@@ -14,7 +14,7 @@ from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
 from pytorchcv.model_provider import get_model as ptcv_get_model
-
+from sentence_transformers import SentenceTransformer
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
@@ -75,7 +75,16 @@ def download_resnet18_cub(save_path=Path.cwd() / 'saved_models' / 'resnet18_cub.
     target_model.eval()
     torch.save(target_model, save_path)
 
+"""
+Download SentenceTransformer from HuggingFace.
+"""
+def download_sentence_transformer(save_path=Path.cwd() / 'saved_models' / 'sentence_transformer.pt'):
+    target_model = SentenceTransformer('all-mpnet-base-v2')
+    target_model.eval()
+    torch.save(target_model, save_path)
+
 
 if __name__ == "__main__":
-    download_resnet18_cub()
+    # download_resnet18_cub()
     # download_all_models()
+    download_sentence_transformer()

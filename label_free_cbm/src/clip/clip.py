@@ -86,7 +86,7 @@ def _get_model_path(url: str):
     Get the model Path from the folders
     """
     model_name = os.path.basename(url)
-    return Path.cwd() / 'clip' / 'models' / model_name
+    return Path.cwd() / 'saved_models' / 'clip_models' / model_name
 
 def _convert_image_to_rgb(image):
     return image.convert("RGB")

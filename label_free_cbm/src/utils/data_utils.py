@@ -6,6 +6,9 @@ from torchvision import datasets, transforms, models
 import clip
 from pytorchcv.model_provider import get_model as ptcv_get_model
 
+# Ugly magic path because notebooks and scripts have different working directories
+PATH_ROOT = Path("/home/gridsan/vyuan/Label-free-CBM")
+
 DATASET_ROOTS = {
     "imagenet_train": "YOUR_PATH/CLS-LOC/train/",
     "imagenet_val": "YOUR_PATH/ImageNet_val/",
@@ -110,7 +113,7 @@ def get_targets_only(dataset_name):
     pil_data = get_data(dataset_name)
     return pil_data.targets
 
-def get_target_model(target_name, device):
+def get_target_model(target_name, device, path_root=PATH_ROOT):
     
     if target_name.startswith("clip_"):
         target_name = target_name[5:]
@@ -129,7 +132,7 @@ def get_target_model(target_name, device):
         preprocess = get_resnet_imagenet_preprocess()
         
     elif target_name == 'resnet18_cub':
-        path = Path.cwd() / 'saved_models' / 'resnet18_cub.pt'
+        path = path_root / 'saved_models' / 'resnet18_cub.pt'
         target_model = torch.load(path).to(device)
         target_model.eval()
         preprocess = get_resnet_imagenet_preprocess()
