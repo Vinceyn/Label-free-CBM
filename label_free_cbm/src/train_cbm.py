@@ -8,16 +8,9 @@ import random
 
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-
-import similarity
 from utils import data_utils, utils
+import similarity
 from glm_saga.elasticnet import IndexedTensorDataset, glm_saga
-
-
-log_file = 'run_{}.log'.format(datetime.datetime.now().strftime("%Y%m%d%H%M"))
-log_path = Path.cwd() / 'logs' / log_file
-
-logging.basicConfig(filename=log_path, level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
 
 log_file = 'run_{}.log'.format(datetime.datetime.now().strftime("%Y%m%d%H%M"))
 log_path = Path.cwd() / 'logs' / log_file
@@ -26,7 +19,7 @@ logging.basicConfig(filename=log_path, level=logging.DEBUG, format='%(asctime)s 
 
 parser = argparse.ArgumentParser(description='Settings for creating CBM')
 
-logging.debug('Parsing daataset, concept set, backbone and clip name')
+logging.debug('Parsing dataset, concept set, backbone and clip name')
 parser.add_argument("--dataset", type=str, default="cifar10")
 parser.add_argument("--concept_set", type=str, default=None, 
                     help="path to concept set name")
@@ -51,12 +44,14 @@ parser.add_argument("--interpretability_cutoff", type=float, default=0.45, help=
 parser.add_argument("--lam", type=float, default=0.0007, help="Sparsity regularization parameter, higher->more sparse")
 parser.add_argument("--n_iters", type=int, default=1000, help="How many iterations to run the final layer solver for")
 parser.add_argument("--print", action='store_true', help="Print all concepts being deleted in this stage")
+parser.add_argument("--name_suffix", type=str, default="", help="Suffix to add to saved model name")
 
 def train_cbm_and_save(args):
 
     logging.info('Loading concept and classes')    
     if not os.path.exists(args.save_dir):
         os.mkdir(args.save_dir)
+
     if args.concept_set==None:
         args.concept_set = "data/concept_sets/{}_gpt3_ensemble2.txt".format(args.dataset)
         
@@ -85,9 +80,9 @@ def train_cbm_and_save(args):
     logging.info('Loading activations from backbone and CLIP')
     logging.debug('Fetching save names for activations')
     target_save_name, clip_save_name, text_save_name = utils.get_save_names(args.clip_name, args.backbone, 
-                                            args.feature_layer,d_train, args.concept_set, "avg", args.activation_dir)
+                                            args.feature_layer, d_train, args.concept_set, "avg", args.activation_dir, args.name_suffix)
     val_target_save_name, val_clip_save_name, text_save_name =  utils.get_save_names(args.clip_name, args.backbone,
-                                            args.feature_layer, d_val, args.concept_set, "avg", args.activation_dir)
+                                            args.feature_layer, d_val, args.concept_set, "avg", args.activation_dir, args.name_suffix)
     
     logging.debug('Loading activations from backbone and CLIP, and normalizing')
 
@@ -197,6 +192,7 @@ def train_cbm_and_save(args):
     concepts = [concepts[i] for i in range(len(concepts)) if interpretable[i]]
 
     logging.debug('Remaining concepts: {}'.format(concepts)) 
+    print(f'Remaining concepts: {concepts}')
     del clip_features, val_clip_features
     
     logging.info('Creating new projection layer with interpretable concepts')
@@ -251,7 +247,8 @@ def train_cbm_and_save(args):
     b_g = output_proj['path'][0]['bias']
     
     logging.info('Saving the final model')
-    save_name = "{}/{}_cbm_{}".format(args.save_dir, args.dataset, datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))
+    concept_set_name = args.concept_set.split("/")[-1].split(".")[0]  
+    save_name = f"{args.save_dir}/{args.dataset}_{concept_set_name}_cbm_{datetime.datetime.now().strftime('%Y_%m_%d_%H_%M')}"
     os.mkdir(save_name)
     torch.save(train_mean, os.path.join(save_name, "proj_mean.pt"))
     torch.save(train_std, os.path.join(save_name, "proj_std.pt"))

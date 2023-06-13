@@ -9,6 +9,7 @@ import logging
 from typing import Any, Union, List
 
 import torch
+import torchvision
 
 from pathlib import Path
 from PIL import Image
@@ -83,8 +84,17 @@ def download_sentence_transformer(save_path=Path.cwd() / 'saved_models' / 'sente
     target_model.eval()
     torch.save(target_model, save_path)
 
+def download_alexnet(save_path=Path.cwd() / 'saved_models' / 'alexnet.pt'):
+
+    # Download the pre-trained AlexNet model
+    model = torchvision.models.alexnet(pretrained=True)
+
+    # Save the model to a file
+    torch.save(model.state_dict(), save_path)
+    
 
 if __name__ == "__main__":
     # download_resnet18_cub()
     # download_all_models()
-    download_sentence_transformer()
+    # download_sentence_transformer()
+    download_alexnet()

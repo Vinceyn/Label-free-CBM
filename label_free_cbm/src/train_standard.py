@@ -13,6 +13,9 @@ from utils import data_utils, utils
 parser = argparse.ArgumentParser(description='Settings for creating model')
 
 parser.add_argument("--backbone", type=str, default="clip_RN50", help="Which pretrained model to use as backbone")
+
+# Define command line arguments
+parser = argparse.ArgumentParser(description='Train a linear classifier on top of a pre-trained backbone')
 parser.add_argument("--device", type=str, default="cuda", help="Which device to use")
 parser.add_argument("--batch_size", type=int, default=512, help="Batch size used when saving model/CLIP activations")
 parser.add_argument("--dataset", type=str, default="cifar10")
@@ -23,9 +26,9 @@ parser.add_argument("--save_dir", type=str, default='saved_models', help="where 
 parser.add_argument("--lam", type=float, default=0.0125, help="Sparsity regularization parameter, higher->more sparse")
 parser.add_argument("--n_iters", type=int, default=1000, help="How many iterations to run the final layer solver for")
 
+# Define function to train and save the model
 def train_and_save(args):
-    #load data and models
-    
+    # Load data and models
     d_train = args.dataset + "_train"
     d_val = args.dataset + "_val"
     
@@ -41,7 +44,8 @@ def train_and_save(args):
                                                   args.activation_dir)
     val_target_save_name, _, _ =  utils.get_save_names("", args.backbone, args.feature_layer, d_val, "", "avg",
                                                        args.activation_dir)
-    #save activations and get save_paths
+    
+    # Save activations and get save_paths
     if args.backbone.startswith("clip_"):
         model, _ = clip.load(args.backbone[5:], device=args.device)
         utils.save_clip_image_features(model, data_t, target_save_name, args.batch_size, args.device)
@@ -52,11 +56,11 @@ def train_and_save(args):
         utils.save_target_activations(target_model, val_data_t, val_target_save_name, target_layers = [args.feature_layer],
                                   batch_size = args.batch_size, device = args.device, pool_mode='avg')
     
-
-    #load features
+    # Load features
     target_features = torch.load(target_save_name, map_location="cpu").float()
     val_target_features = torch.load(val_target_save_name, map_location="cpu").float()
     
+    # Preprocess data
     with torch.no_grad():
         train_c = target_features.detach()
         val_c = val_target_features.detach()
@@ -76,7 +80,7 @@ def train_and_save(args):
 
         val_ds = TensorDataset(val_z,val_y)
 
-
+    # Create data loaders
     indexed_train_loader = DataLoader(indexed_train_ds, batch_size=512, shuffle=True)
     val_loader = DataLoader(val_ds, batch_size=512, shuffle=False)
 
@@ -85,6 +89,7 @@ def train_and_save(args):
     linear.weight.data.zero_()
     linear.bias.data.zero_()
     
+    # Define hyperparameters
     STEP_SIZE = 0.1
     ALPHA = 0.99
     metadata = {}
@@ -99,6 +104,7 @@ def train_and_save(args):
     b_g = output_proj['path'][0]['bias']
     W_g = W_g.to(args.device)
     
+    # Save the model
     save_name = "{}/{}_finetuned_{}".format(args.save_dir, args.dataset, datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))
     os.mkdir(save_name)
     torch.save(train_mean, os.path.join(save_name, "proj_mean.pt"))
@@ -119,6 +125,7 @@ def train_and_save(args):
         out_dict['sparsity'] = {"Non-zero weights":nnz, "Total weights":total, "Percentage non-zero":nnz/total}
         json.dump(out_dict, f, indent=2)
     
+# Run the code if this file is being run directly
 if __name__=='__main__':
     args = parser.parse_args()
     train_and_save(args)

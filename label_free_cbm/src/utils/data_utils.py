@@ -1,6 +1,7 @@
 import os
 import torch
 from pathlib import Path
+import torch.nn as nn
 from torchvision import datasets, transforms, models
 
 import clip
@@ -12,15 +13,23 @@ PATH_ROOT = Path("/home/gridsan/vyuan/Label-free-CBM")
 DATASET_ROOTS = {
     "imagenet_train": "YOUR_PATH/CLS-LOC/train/",
     "imagenet_val": "YOUR_PATH/ImageNet_val/",
-    "cub_train":"data/CUB/train",
-    "cub_val":"data/CUB/test"
+    "cub_train":"data/datasets/CUB/train",
+    "cub_val":"data/datasets/CUB/test",
+    "doctor_nurse_full_train": "data/datasets/doctor_nurse_full/train", 
+    "doctor_nurse_full_val": "data/datasets/doctor_nurse_full/val",
+    "doctor_nurse_gender_biased_train": "data/datasets/doctor_nurse_gender_biased/train", 
+    "doctor_nurse_gender_biased_val": "data/datasets/doctor_nurse_gender_biased/val",
 }
 
 LABEL_FILES = {"places365":"data/categories_places365_clean.txt",
                "imagenet":"data/imagenet_classes.txt",
                "cifar10":"data/cifar10_classes.txt",
                "cifar100":"data/cifar100_classes.txt",
-               "cub":"data/cub_classes.txt"}
+               "cub":"data/cub_classes.txt",
+               "doctor_nurse_full":"data/doctor_nurse_classes.txt",
+               "doctor_nurse_gender_biased": "data/doctor_nurse_classes.txt",
+}
+
 
 def get_resnet_imagenet_preprocess():
     target_mean = [0.485, 0.456, 0.406]
@@ -29,48 +38,16 @@ def get_resnet_imagenet_preprocess():
                    transforms.ToTensor(), transforms.Normalize(mean=target_mean, std=target_std)])
     return preprocess
 
-"""This version is deprecated, as it used to download models
-def get_data(dataset_name, preprocess=None):
-    if dataset_name == "cifar100_train":
-        data = datasets.CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=True,
-                                   transform=preprocess)
+def get_alexnet_doctor_nurse_preprocess():
+    preprocess = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            transforms.Lambda(lambda img: img.convert('RGBA')),
+        ]) 
 
-    elif dataset_name == "cifar100_val":
-        data = datasets.CIFAR100(root=os.path.expanduser("~/.cache"), download=True, train=False, 
-                                   transform=preprocess)
-        
-    elif dataset_name == "cifar10_train":
-        data = datasets.CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=True,
-                                   transform=preprocess)
-        
-    elif dataset_name == "cifar10_val":
-        data = datasets.CIFAR10(root=os.path.expanduser("~/.cache"), download=True, train=False,
-                                   transform=preprocess)
-        
-    elif dataset_name == "places365_train":
-        try:
-            data = datasets.Places365(root=os.path.expanduser("~/.cache"), split='train-standard', small=True, download=True,
-                                       transform=preprocess)
-        except(RuntimeError):
-            data = datasets.Places365(root=os.path.expanduser("~/.cache"), split='train-standard', small=True, download=False,
-                                   transform=preprocess)
-            
-    elif dataset_name == "places365_val":
-        try:
-            data = datasets.Places365(root=os.path.expanduser("~/.cache"), split='val', small=True, download=True,
-                                   transform=preprocess)
-        except(RuntimeError):
-            data = datasets.Places365(root=os.path.expanduser("~/.cache"), split='val', small=True, download=False,
-                                   transform=preprocess)
-        
-    elif dataset_name in DATASET_ROOTS.keys():
-        data = datasets.ImageFolder(DATASET_ROOTS[dataset_name], preprocess)
-               
-    elif dataset_name == "imagenet_broden":
-        data = torch.utils.data.ConcatDataset([datasets.ImageFolder(DATASET_ROOTS["imagenet_val"], preprocess), 
-                                                     datasets.ImageFolder(DATASET_ROOTS["broden"], preprocess)])
-    return data
-"""
+
 
 def get_data(dataset_name, preprocess=None):
     if dataset_name == "cifar100_train":
@@ -96,17 +73,18 @@ def get_data(dataset_name, preprocess=None):
     elif dataset_name == "places365_val": 
         data_path = Path.cwd() / 'data' / 'datasets' / 'places365'
         data = datasets.Places365(root=data_path, split="val", small=True, download=False, transform=preprocess)
-            
+    
     elif dataset_name in DATASET_ROOTS.keys():
+        if 'doctor_nurse' in dataset_name:
+            preprocess = get_alexnet_doctor_nurse_preprocess()
         data = datasets.ImageFolder(DATASET_ROOTS[dataset_name], preprocess)
-               
+
     elif dataset_name == "imagenet_broden":
         data = torch.utils.data.ConcatDataset([datasets.ImageFolder(DATASET_ROOTS["imagenet_val"], preprocess), 
                                                      datasets.ImageFolder(DATASET_ROOTS["broden"], preprocess)])
     
     else:
         raise ValueError("Dataset name not found")
-    
     return data
 
 def get_targets_only(dataset_name):
@@ -114,12 +92,34 @@ def get_targets_only(dataset_name):
     return pil_data.targets
 
 def get_target_model(target_name, device, path_root=PATH_ROOT):
-    
+
     if target_name.startswith("clip_"):
         target_name = target_name[5:]
         model, preprocess = clip.load(target_name, device=device)
         target_model = lambda x: model.encode_image(x).float()
     
+    elif target_name.startswith('alexnet_doctor_nurse'):
+        
+        # target_model = models.alexnet()
+        # target_model.classifier[6] = nn.Linear(4096, 2)
+        # state_dict = torch.load(path_root / f'saved_models/doctor_nurse_alexnet/{target_name}.pt', map_location='cpu')
+        # target_model = target_model.load_state_dict(state_dict)
+
+        target_model = models.alexnet()
+        target_model.classifier[6] = nn.Linear(4096, 2)
+        path_alexnet_model = Path("/home/gridsan/vyuan/Label-free-CBM") / 'saved_models' / 'doctor_nurse_alexnet' / f'{target_name}.pt'
+        state_dict = torch.load(path_alexnet_model, map_location='cpu')
+        target_model.load_state_dict(state_dict)
+        target_model = target_model.to(device)
+
+        target_model.eval()
+        preprocess = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]) 
+
     elif target_name == 'resnet18_places': 
         target_model = models.resnet18(pretrained=False, num_classes=365).to(device)
         state_dict = torch.load('data/resnet18_places365.pth.tar')['state_dict']

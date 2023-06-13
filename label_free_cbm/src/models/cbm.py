@@ -13,6 +13,9 @@ class CBM_model(torch.nn.Module):
             self.backbone = model
         elif "cub" in backbone_name:
             self.backbone = lambda x: model.features(x)
+        elif "alexnet" in backbone_name:
+            model.avgpool = torch.nn.AdaptiveAvgPool2d(output_size=(1, 1))
+            self.backbone = torch.nn.Sequential(*list(model.children())[:-1])
         else:
             self.backbone = torch.nn.Sequential(*list(model.children())[:-1])
             
