@@ -29,7 +29,7 @@ data_transforms = {
 
 percent = ''
 
-data_dir = '/home/gridsan/vyuan/Label-free-CBM/data/datasets/doctor_nurse_code/train_val_split_biased/'
+data_dir = '/home/gridsan/vyuan/Label-free-CBM/data/datasets/doctor_nurse_code/train_val_split/'
 image_datasets = {'train': datasets.ImageFolder(data_dir + str(percent) + '/train',
                                           data_transforms['train']),
                   'val': datasets.ImageFolder(data_dir + 'val',
@@ -55,6 +55,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
             if phase == 'train':
+                scheduler.step()
                 model.train()  # Set model to training mode
             else:
                 model.eval()   # Set model to evaluate mode
@@ -81,7 +82,6 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
-                        scheduler.step()
 
                 # statistics 
                 running_loss += loss.item() * inputs.size(0)
@@ -124,7 +124,7 @@ optimizer_conv = optim.SGD(model_conv.classifier.parameters(), lr=0.001, momentu
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 
 model_conv = train_model(model_conv, criterion, optimizer_conv,
-                         exp_lr_scheduler, num_epochs=25)
+                         exp_lr_scheduler, num_epochs=2)
 
 print(model_conv)
-torch.save(model_conv.state_dict(), '/home/gridsan/vyuan/Label-free-CBM/saved_models/doctor_nurse_alexnet/alexnet_doctor_nurse_biased' + str(percent) + '.pt')
+torch.save(model_conv.state_dict(), '/home/gridsan/vyuan/Label-free-CBM/saved_models/doctor_nurse_alexnet/alexnet_doctor_nurse' + str(percent) + '.pt')

@@ -31,6 +31,8 @@ if [ "$METHOD" == "LF-CBM" ]; then
                 --dataset doctor_nurse_full \
                 --backbone alexnet_doctor_nurse \
                 --concept_set data/concept_sets/doctor_nurse_with_gender.txt \
+                --clip_cutoff 0.2 \
+                --interpretability_cutoff 0.3 \
                 --feature_layer avgpool \
                 --n_iters 1000 \
                 --print
@@ -38,6 +40,8 @@ if [ "$METHOD" == "LF-CBM" ]; then
             python label_free_cbm/src/train_cbm.py \
                 --dataset doctor_nurse_full \
                 --backbone alexnet_doctor_nurse \
+                --clip_cutoff 0.2 \
+                --interpretability_cutoff 0.3 \
                 --concept_set data/concept_sets/doctor_nurse_filtered_new.txt \
                 --feature_layer avgpool \
                 --n_iters 1000 \
@@ -48,6 +52,8 @@ if [ "$METHOD" == "LF-CBM" ]; then
             python label_free_cbm/src/train_cbm.py \
                 --dataset doctor_nurse_gender_biased \
                 --backbone alexnet_doctor_nurse \
+                --clip_cutoff 0.25 \
+                --interpretability_cutoff 0.35 \
                 --concept_set data/concept_sets/doctor_nurse_with_gender.txt \
                 --feature_layer avgpool \
                 --n_iters 1000 \

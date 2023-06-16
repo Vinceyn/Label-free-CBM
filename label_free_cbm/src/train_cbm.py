@@ -111,12 +111,14 @@ def train_cbm_and_save(args):
     logging.info('Filtering concepts not activating highly')
     highest = torch.mean(torch.topk(clip_features, dim=0, k=5)[0], dim=0)
     
+    protected_concepts = ["a male", "a female"] # add your list of protected concepts here
+    
     if args.print:
         for i, concept in enumerate(concepts):
-            if highest[i]<=args.clip_cutoff:
+            if highest[i]<=args.clip_cutoff and concept not in protected_concepts:
                 print("Deleting {}, CLIP top5:{:.3f}".format(concept, highest[i]))
-    concepts = [concepts[i] for i in range(len(concepts)) if highest[i]>args.clip_cutoff]
-
+    concepts_idx = [i for i in range(len(concepts)) if highest[i]>args.clip_cutoff or concepts[i] in protected_concepts]
+    concepts = [concepts[i] for i in range(len(concepts)) if highest[i]>args.clip_cutoff or concepts[i] in protected_concepts]
 
     #save memory by recalculating
     del clip_features
@@ -126,12 +128,12 @@ def train_cbm_and_save(args):
         image_features = torch.load(clip_save_name, map_location="cpu").float()
         image_features /= torch.norm(image_features, dim=1, keepdim=True)
 
-        text_features = torch.load(text_save_name, map_location="cpu").float()[highest>args.clip_cutoff]
+        text_features = torch.load(text_save_name, map_location="cpu").float()[concepts_idx]
         text_features /= torch.norm(text_features, dim=1, keepdim=True)
     
         clip_features = image_features @ text_features.T
         del image_features, text_features    
-    val_clip_features = val_clip_features[:, highest>args.clip_cutoff]
+    val_clip_features = val_clip_features[:, concepts_idx]
 
     logging.info('Training projection layer from backbone to concepts')    
     #learn projection layer
@@ -186,17 +188,18 @@ def train_cbm_and_save(args):
         
     if args.print:
         for i, concept in enumerate(concepts):
-            if sim[i]<=args.interpretability_cutoff:
+            if sim[i]<=args.interpretability_cutoff and concept not in protected_concepts:
                 print("Deleting {}, Interpretability:{:.3f}".format(concept, sim[i]))
     
-    concepts = [concepts[i] for i in range(len(concepts)) if interpretable[i]]
+    concepts_idx = [i for i in range(len(concepts)) if interpretable[i] or concepts[i] in protected_concepts]
+    concepts = [concepts[i] for i in range(len(concepts)) if interpretable[i] or concepts[i] in protected_concepts]
 
     logging.debug('Remaining concepts: {}'.format(concepts)) 
     print(f'Remaining concepts: {concepts}')
     del clip_features, val_clip_features
     
     logging.info('Creating new projection layer with interpretable concepts')
-    W_c = proj_layer.weight[interpretable]
+    W_c = proj_layer.weight[concepts_idx]
     proj_layer = torch.nn.Linear(in_features=target_features.shape[1], out_features=len(concepts), bias=False)
     proj_layer.load_state_dict({"weight":W_c})
     
