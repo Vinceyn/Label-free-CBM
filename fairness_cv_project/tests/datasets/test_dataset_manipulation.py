@@ -24,6 +24,24 @@ def test_same_test_files_between_biased_and_balanced(bias_ratio: float, train_ra
         balanced_files = set(os.listdir(path_balanced_test / category))
         assert biased_files == balanced_files
 
+@pytest.mark.parametrize("bias_ratio, train_ratio", params)
+def test_same_file_between_test_biased_and_balanced(bias_ratio: float, train_ratio: float):
+    path_root = Path.cwd() / 'data' / 'datasets' / 'doctor_nurse' / f'biased_dataset_bias_{int(bias_ratio*100)}_train_{int(train_ratio*100)}'
+
+    path_biased_test = path_root / 'biased' / 'test'
+    path_balanced_test = path_root / 'balanced' / 'test'
+    path_test = path_root / 'test'
+
+    for category in ['doctors', 'nurses']:
+        for gender in ['male', 'female']:
+            biased_files = os.listdir(path_biased_test / category)
+            set_biased_files = set([file for file in biased_files if file.split('.')[-2].endswith(f'_{gender}')])
+
+            balanced_files = os.listdir(path_balanced_test / category)
+            set_balanced_files = set([file for file in balanced_files if file.split('.')[-2].endswith(f'_{gender}')])
+
+            set_test_files = set(os.listdir(path_test / f'{category}_{gender}'))
+            assert set_biased_files == set_balanced_files == set_test_files
 
 @pytest.mark.parametrize("bias_ratio, train_ratio", params)
 def test_balanced_test_files(bias_ratio: float, train_ratio: float):

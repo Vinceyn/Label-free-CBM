@@ -325,11 +325,17 @@ def create_biased_dataset(bias_ratio: float, train_ratio: float, random_seed: in
     path_balanced_train = path_biased_dataset_root / 'balanced' / 'train'
     path_balanced_test = path_biased_dataset_root / 'balanced' / 'test'
 
+    path_test = path_biased_dataset_root / 'test'
+
     path_balanced_dataset = path_doctor_nurse / 'balanced_dataset'
 
     for path in [path_biased_train, path_biased_test, path_balanced_train, path_balanced_test]:
         for category in ['doctors', 'nurses']:
             os.makedirs(path / category, exist_ok=True)
+
+    for category in ['doctors', 'nurses']:
+        for gender in ['male', 'female']:
+            os.makedirs(path_test / f'{category}_{gender}', exist_ok=True)
 
     # Count the number of doctors and nurses in the balanced dataset
     num_doctors_male, num_doctors_female, num_nurses_male, num_nurses_female = count_files_dataset(path_balanced_dataset, verbose=False)
@@ -346,6 +352,7 @@ def create_biased_dataset(bias_ratio: float, train_ratio: float, random_seed: in
     num_train_class_gender = int(num_train_class / 2)
     num_sample_minority_class = int(num_train_class - (num_doctors_female * train_ratio))
     print(f"Ratio {bias_ratio}, num_train_class {num_train_class}, num_train_class gender {num_train_class_gender}, num_sample_minority_class {num_sample_minority_class}")
+
      # Global list for test_files to avoid overlap with training sets
     test_files_global = []
 
@@ -361,6 +368,7 @@ def create_biased_dataset(bias_ratio: float, train_ratio: float, random_seed: in
                 new_filename = file.stem + '_' + gender + file.suffix
                 shutil.copy2(file, path_biased_test / category / new_filename)
                 shutil.copy2(file, path_balanced_test / category / new_filename)
+                shutil.copy2(file, path_test / f'{category}_{gender}' / new_filename)
 
     # Create balanced training dataset
     for category in ['doctors', 'nurses']:
@@ -395,20 +403,19 @@ def create_biased_dataset(bias_ratio: float, train_ratio: float, random_seed: in
 
 
 if __name__ == '__main__':
-    # path_doctor_nurse = Path.cwd() / 'data' / 'datasets' / 'doctor_nurse'
+    path_doctor_nurse = Path.cwd() / 'data' / 'datasets' / 'doctor_nurse'
     # remove_ash_extensions_image()
     # transfer_original_to_gender_dataset()
 
-    # count_files_dataset(path_doctor_nurse / 'balanced_dataset') 
+    count_files_dataset(path_doctor_nurse / 'original_dataset_gender') 
     # create_balanced_dataset()
     # count_files_dataset(path_doctor_nurse / 'balanced_dataset') 
     # create_default_train_test_set(ratio_train=0.75, suffix='75')
     # count_files_train_test_set(path_doctor_nurse / 'default_train_test_75', True)
-    create_biased_dataset(bias_ratio=0, train_ratio=0.75, random_seed=42)
-    create_biased_dataset(bias_ratio=0.25, train_ratio=0.75, random_seed=42)
-    create_biased_dataset(bias_ratio=0.33, train_ratio=0.75, random_seed=42)
-    create_biased_dataset(bias_ratio=0.5, train_ratio=0.75, random_seed=42)
-    create_biased_dataset(bias_ratio=0.66, train_ratio=0.75, random_seed=42)
-    create_biased_dataset(bias_ratio=0.75, train_ratio=0.75, random_seed=42)
-    create_biased_dataset(bias_ratio=1, train_ratio=0.75, random_seed=42)
+    # create_biased_dataset(bias_ratio=0, train_ratio=0.75, random_seed=42)
+    # create_biased_dataset(bias_ratio=0.25, train_ratio=0.75, random_seed=42)
+    # create_biased_dataset(bias_ratio=0.5, train_ratio=0.75, random_seed=42)
+    # create_biased_dataset(bias_ratio=0.66, train_ratio=0.75, random_seed=42)
+    # create_biased_dataset(bias_ratio=0.75, train_ratio=0.75, random_seed=42)
+    # create_biased_dataset(bias_ratio=1, train_ratio=0.75, random_seed=42)
     
