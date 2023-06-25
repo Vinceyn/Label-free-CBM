@@ -1,8 +1,12 @@
+import sys
+from pathlib import Path
+sys.path.insert(1, str(Path.cwd()))
+
 import re
 import numpy as np
 from matplotlib import pyplot as pl
 
-from plots import colors
+from fairness_cv_project.methods.label_free_cbm.src.plots import colors
 
 def bar(contributions, feature_names,  max_display=10, show=True, title=None, fontsize=13):
 

@@ -9,9 +9,12 @@ import torch.nn as nn
 from torchvision import datasets, models, transforms
 import matplotlib.pyplot as plt
 
-from utils import data_utils
-from models import cbm
-from plots import plots
+import sys
+sys.path.insert(1, str(Path.cwd()))
+
+from fairness_cv_project.methods.label_free_cbm.src.utils import data_utils
+from fairness_cv_project.methods.label_free_cbm.src.models import cbm
+from fairness_cv_project.methods.label_free_cbm.src.plots import plots
 
 # Load the model
 def load_cbm_model(load_dir, device):
@@ -137,16 +140,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     device = args.device
-    path_dataset = Path.cwd() / args.path_dataset / "test"
+    path_dataset = Path.cwd() / 'data' / 'datasets' / 'doctor_nurse' / args.path_dataset / "test"
 
     if args.load_dir:
         load_dir = Path(f"{args.load_dir}")
         path_result = Path.cwd() / 'results' / 'doctor_nurse' / f"results_{args.load_dir.split('/')[-1]}" 
         model = load_cbm_model(load_dir, device)
     else:
-        path_alexnet_model = Path(f"{args.path_alexnet_model}")
+        path_alexnet_model = Path.cwd() / 'saved_models' / 'doctor_nurse_alexnet' / (f"{args.path_alexnet_model}")
         path_result = Path.cwd() / 'results' / 'doctor_nurse' / f"results_{args.path_alexnet_model.split('/')[-1]}"
         model = load_alexnet_model(path_alexnet_model, device)
+    
     print(path_result)
     path_result.mkdir(parents=True, exist_ok=True)
 

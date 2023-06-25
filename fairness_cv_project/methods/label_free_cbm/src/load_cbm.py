@@ -1,12 +1,16 @@
 import os
+import sys
+from pathlib import Path
+sys.path.insert(1, str(Path.cwd()))
+
 import json
 from pathlib import Path
 
 import torch
 
-from utils import data_utils
-from models import cbm
-from plots import plots
+from fairness_cv_project.methods.label_free_cbm.src.utils import data_utils
+from fairness_cv_project.methods.label_free_cbm.src.models import cbm
+from fairness_cv_project.methods.label_free_cbm.src.plots import plots
 
 
 # change this to the correct model dir, everything else should be taken care of

@@ -1,8 +1,11 @@
 import os
+import sys
+from pathlib import Path
+sys.path.insert(1, str(Path.cwd()))
+
 import json
 import torch
-from utils import data_utils
-from pathlib import Path
+from fairness_cv_project.methods.label_free_cbm.src.utils import data_utils
 
 class CBM_model(torch.nn.Module):
     def __init__(self, backbone_name, W_c, W_g, b_g, proj_mean, proj_std, device="cuda"):

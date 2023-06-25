@@ -1,3 +1,8 @@
+import os
+import sys
+from pathlib import Path
+sys.path.insert(1, str(Path.cwd()))
+
 import argparse
 import datetime
 import json
@@ -8,43 +13,9 @@ import random
 
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-from utils import data_utils, utils
-import similarity
-from glm_saga.elasticnet import IndexedTensorDataset, glm_saga
-
-log_file = 'run_{}.log'.format(datetime.datetime.now().strftime("%Y%m%d%H%M"))
-log_path = Path.cwd() / 'logs' / log_file
-
-logging.basicConfig(filename=log_path, level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
-
-parser = argparse.ArgumentParser(description='Settings for creating CBM')
-
-logging.debug('Parsing dataset, concept set, backbone and clip name')
-parser.add_argument("--dataset", type=str, default="cifar10")
-parser.add_argument("--concept_set", type=str, default=None, 
-                    help="path to concept set name")
-parser.add_argument("--backbone", type=str, default="clip_RN50", help="Which pretrained model to use as backbone")
-parser.add_argument("--clip_name", type=str, default="ViT-B/16", help="Which CLIP model to use")
-
-logging.debug('Parsing torch device')
-parser.add_argument("--device", type=str, default="cuda", help="Which device to use")
-
-logging.debug('Parsing hyperparameters')
-parser.add_argument("--batch_size", type=int, default=512, help="Batch size used when saving model/CLIP activations")
-parser.add_argument("--saga_batch_size", type=int, default=256, help="Batch size used when fitting final layer")
-parser.add_argument("--proj_batch_size", type=int, default=50000, help="Batch size to use when learning projection layer")
-
-parser.add_argument("--feature_layer", type=str, default='layer4', 
-                    help="Which layer to collect activations from. Should be the name of second to last layer in the model")
-parser.add_argument("--activation_dir", type=str, default='saved_activations', help="save location for backbone and CLIP activations")
-parser.add_argument("--save_dir", type=str, default='saved_models', help="where to save trained models")
-parser.add_argument("--clip_cutoff", type=float, default=0.25, help="concepts with smaller top5 clip activation will be deleted")
-parser.add_argument("--proj_steps", type=int, default=1000, help="how many steps to train the projection layer for")
-parser.add_argument("--interpretability_cutoff", type=float, default=0.45, help="concepts with smaller similarity to target concept will be deleted")
-parser.add_argument("--lam", type=float, default=0.0007, help="Sparsity regularization parameter, higher->more sparse")
-parser.add_argument("--n_iters", type=int, default=1000, help="How many iterations to run the final layer solver for")
-parser.add_argument("--print", action='store_true', help="Print all concepts being deleted in this stage")
-parser.add_argument("--name_suffix", type=str, default="", help="Suffix to add to saved model name")
+from fairness_cv_project.methods.label_free_cbm.src.utils import data_utils, utils
+import fairness_cv_project.methods.label_free_cbm.src.similarity as similarity
+from fairness_cv_project.methods.label_free_cbm.src.glm_saga.elasticnet import IndexedTensorDataset, glm_saga
 
 def train_cbm_and_save(args):
 
@@ -68,6 +39,9 @@ def train_cbm_and_save(args):
      
     with open(args.concept_set) as f:
         concepts = f.read().split("\n")
+
+    # Define protected concepts
+    protected_concepts = args.protected_concepts
     
     #save activations and get save_paths
     logging.info('Saving activations from backbone and CLIP')
@@ -110,8 +84,6 @@ def train_cbm_and_save(args):
     #filter concepts not activating highly
     logging.info('Filtering concepts not activating highly')
     highest = torch.mean(torch.topk(clip_features, dim=0, k=5)[0], dim=0)
-    
-    protected_concepts = ["a male", "a female"] # add your list of protected concepts here
     
     if args.print:
         for i, concept in enumerate(concepts):
@@ -276,7 +248,53 @@ def train_cbm_and_save(args):
         total = W_g.numel()
         out_dict['sparsity'] = {"Non-zero weights":nnz, "Total weights":total, "Percentage non-zero":nnz/total}
         json.dump(out_dict, f, indent=2)
-    
-if __name__=='__main__':
+ 
+
+def parse_args():
+    """
+    Parse input arguments
+    """
+    parser = argparse.ArgumentParser(description='Settings for creating CBM')
+
+    logging.debug('Parsing dataset, concept set, backbone and clip name')
+    parser.add_argument("--dataset", type=str, default="cifar10")
+    parser.add_argument("--concept_set", type=str, default=None, 
+                        help="path to concept set name")
+    parser.add_argument("--backbone", type=str, default="clip_RN50", help="Which pretrained model to use as backbone")
+    parser.add_argument("--clip_name", type=str, default="ViT-B/16", help="Which CLIP model to use")
+
+    logging.debug('Parsing torch device')
+    parser.add_argument("--device", type=str, default="cuda", help="Which device to use")
+
+    logging.debug('Parsing hyperparameters')
+    parser.add_argument("--batch_size", type=int, default=512, help="Batch size used when saving model/CLIP activations")
+    parser.add_argument("--saga_batch_size", type=int, default=256, help="Batch size used when fitting final layer")
+    parser.add_argument("--proj_batch_size", type=int, default=50000, help="Batch size to use when learning projection layer")
+
+    parser.add_argument("--feature_layer", type=str, default='layer4', 
+                        help="Which layer to collect activations from. Should be the name of second to last layer in the model")
+    parser.add_argument("--activation_dir", type=str, default='saved_activations', help="save location for backbone and CLIP activations")
+    parser.add_argument("--save_dir", type=str, default='saved_models', help="where to save trained models")
+    parser.add_argument("--clip_cutoff", type=float, default=0.25, help="concepts with smaller top5 clip activation will be deleted")
+    parser.add_argument("--proj_steps", type=int, default=1000, help="how many steps to train the projection layer for")
+    parser.add_argument("--interpretability_cutoff", type=float, default=0.45, help="concepts with smaller similarity to target concept will be deleted")
+    parser.add_argument("--lam", type=float, default=0.0007, help="Sparsity regularization parameter, higher->more sparse")
+    parser.add_argument("--n_iters", type=int, default=1000, help="How many iterations to run the final layer solver for")
+    parser.add_argument("--print", action='store_true', help="Print all concepts being deleted in this stage")
+    parser.add_argument("--name_suffix", type=str, default="", help="Suffix to add to saved model name")
+    parser.add_argument('--protected_concepts', nargs='+', default=[], help='protected concepts')
     args = parser.parse_args()
+
+    return args
+
+# Defining log files
+
+log_file = 'run_{}.log'.format(datetime.datetime.now().strftime("%Y%m%d%H%M"))
+log_path = Path.cwd() / 'logs' / log_file
+
+logging.basicConfig(filename=log_path, level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
+
+
+if __name__=='__main__':
+    args = parse_args()
     train_cbm_and_save(args)

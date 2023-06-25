@@ -1,4 +1,7 @@
 import os
+import sys
+from pathlib import Path
+sys.path.insert(1, str(Path.cwd()))
 import math
 from tqdm import tqdm
 
@@ -6,8 +9,8 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-import clip
-from utils import data_utils
+import fairness_cv_project.methods.label_free_cbm.src.clip
+from fairness_cv_project.methods.label_free_cbm.src.utils import data_utils
 
 PM_SUFFIX = {"max":"_max", "avg":"avg"}
 

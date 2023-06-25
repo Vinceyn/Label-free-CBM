@@ -102,11 +102,10 @@ def train(path_dataset: Path):
                     best_acc = epoch_acc
                     best_model_wts = copy.deepcopy(model.state_dict())
 
-            print()
-
+                
         # load best model weights
         model.load_state_dict(best_model_wts)
-        return model
+        return model, best_acc
 
     model_conv = models.alexnet()
     model_conv.load_state_dict(torch.load('/home/gridsan/vyuan/Label-free-CBM/saved_models/alexnet.pt'))
@@ -127,13 +126,16 @@ def train(path_dataset: Path):
     # Decay LR by a factor of 0.1 every 7 epochs
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 
-    model_conv = train_model(model_conv, criterion, optimizer_conv,
+    model_conv, best_acc = train_model(model_conv, criterion, optimizer_conv,
                             exp_lr_scheduler, num_epochs=25)
 
     print(model_conv)
     folders = str(path_dataset).split('/')
     name_dataset = '-'.join(folders[-2:])
     torch.save(model_conv.state_dict(), '/home/gridsan/vyuan/Label-free-CBM/saved_models/doctor_nurse_alexnet/alexnet_doctor_nurse' + name_dataset + '.pt')
+
+    with open('/home/gridsan/vyuan/Label-free-CBM/saved_models/doctor_nurse_alexnet/results.txt', 'a') as f:
+        f.write(f'{name_dataset}: {best_acc}\n')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Settings for training')

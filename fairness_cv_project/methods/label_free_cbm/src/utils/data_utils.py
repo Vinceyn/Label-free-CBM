@@ -1,10 +1,14 @@
+import sys
+from pathlib import Path
+sys.path.insert(1, str(Path.cwd()))
+
 import os
 import torch
 from pathlib import Path
 import torch.nn as nn
 from torchvision import datasets, transforms, models
 
-import clip
+import fairness_cv_project.methods.label_free_cbm.src.clip
 from pytorchcv.model_provider import get_model as ptcv_get_model
 
 # Ugly magic path because notebooks and scripts have different working directories

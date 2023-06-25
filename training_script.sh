@@ -10,14 +10,14 @@ echo "Concept set: $CONCEPT_SET"
 
 if [ "$METHOD" == "LF-CBM" ]; then
     if [ "$DATASET" == "CIFAR10" ]; then
-        python label_free_cbm/src/train_cbm.py \
+        python fairness_cv_project/methods/label_free_cbm/src/train_cbm.py \
             --concept_set data/concept_sets/cifar10_filtered.txt
     elif [ "$DATASET" == "CIFAR100" ]; then
-        python label_free_cbm/src/train_cbm.py \
+        python fairness_cv_project/methods/label_free_cbm/src/train_cbm.py \
             --dataset cifar100 \
             --concept_set data/concept_sets/cifar100_filtered.txt
     elif [ "$DATASET" == "CUB200" ]; then
-        python label_free_cbm/src/train_cbm.py \
+        python fairness_cv_project/methods/label_free_cbm/src/train_cbm.py \
             --dataset cub \
             --backbone resnet18_cub \
             --concept_set data/concept_sets/cub_filtered.txt \
@@ -27,7 +27,7 @@ if [ "$METHOD" == "LF-CBM" ]; then
             --lam 0.0002
     elif [ "$DATASET" == "doctor_nurse_full" ]; then
         if [ "$CONCEPT_SET" == "with_gender" ]; then
-            python label_free_cbm/src/train_cbm.py \
+            python fairness_cv_project/methods/label_free_cbm/src/train_cbm.py \
                 --dataset doctor_nurse_full \
                 --backbone alexnet_doctor_nurse \
                 --concept_set data/concept_sets/doctor_nurse_with_gender.txt \
@@ -35,9 +35,10 @@ if [ "$METHOD" == "LF-CBM" ]; then
                 --interpretability_cutoff 0.3 \
                 --feature_layer avgpool \
                 --n_iters 1000 \
+                --protected_concepts "a male" "a female"\
                 --print
         else
-            python label_free_cbm/src/train_cbm.py \
+            python fairness_cv_project/methods/label_free_cbm/src/train_cbm.py \
                 --dataset doctor_nurse_full \
                 --backbone alexnet_doctor_nurse \
                 --clip_cutoff 0.2 \
@@ -47,9 +48,10 @@ if [ "$METHOD" == "LF-CBM" ]; then
                 --n_iters 1000 \
                 --print
         fi
+    # Note: You should change the level of bias depending on the --dataset value
     elif [ "$DATASET" == "doctor_nurse_gender_biased" ]; then
         if [ "$CONCEPT_SET" == "with_gender" ]; then
-            python label_free_cbm/src/train_cbm.py \
+            python fairness_cv_project/methods/label_free_cbm/src/train_cbm.py \
                 --dataset doctor_nurse_gender_biased \
                 --backbone alexnet_doctor_nurse \
                 --clip_cutoff 0.25 \
@@ -57,9 +59,10 @@ if [ "$METHOD" == "LF-CBM" ]; then
                 --concept_set data/concept_sets/doctor_nurse_with_gender.txt \
                 --feature_layer avgpool \
                 --n_iters 1000 \
+                --protected_concepts "a male" "a female"\
                 --print 
         else
-            python label_free_cbm/src/train_cbm.py \
+            python fairness_cv_project/methods/label_free_cbm/src/train_cbm.py \
                 --dataset doctor_nurse_gender_biased \
                 --backbone alexnet_doctor_nurse \
                 --concept_set data/concept_sets/doctor_nurse_filtered_new.txt \
@@ -68,7 +71,7 @@ if [ "$METHOD" == "LF-CBM" ]; then
                 --print 
         fi
     elif [ "$DATASET" == "Places365" ]; then
-        python label_free_cbm/src/train_cbm.py \
+        python fairness_cv_project/methods/label_free_cbm/src/train_cbm.py \
             --dataset places365 \
             --backbone resnet50 \
             --concept_set data/concept_sets/places365_filtered.txt \
@@ -76,7 +79,7 @@ if [ "$METHOD" == "LF-CBM" ]; then
             --n_iters 80 \
             --lam 0.0003
     elif [ "$DATASET" == "ImageNet" ]; then
-        python label_free_cbm/src/train_cbm.py \
+        python fairness_cv_project/methods/label_free_cbm/src/train_cbm.py \
             --dataset imagenet \
             --backbone resnet50 \
             --concept_set data/concept_sets/imagenet_filtered.txt \
